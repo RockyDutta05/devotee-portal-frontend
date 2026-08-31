@@ -46,6 +46,7 @@ export default function Signup() {
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email format';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
+    else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone number must be exactly 10 digits';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -165,7 +166,7 @@ export default function Signup() {
               <Input label="Initiated Name (Optional)" name="initiatedName" value={formData.initiatedName} onChange={handleChange} placeholder="IF ANY" />
             </div>
             <Input label="Email Address" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} placeholder="ENTER YOUR EMAIL" required />
-            <Input label="Phone Number" type="tel" name="phone" value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="ENTER THE PHONE NUMBER" required />
+            <Input label="Phone Number" type="tel" name="phone" maxLength={10} value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="10-DIGIT PHONE NUMBER" required />
           </div>
         )}
 

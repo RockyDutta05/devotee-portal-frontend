@@ -42,11 +42,16 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
+    if (formData.phone && !/^\d{10}$/.test(formData.phone.trim())) {
+      setError('Phone number must be exactly 10 digits.');
+      return;
+    }
     try {
       const updated = await profileService.updateMe(formData);
       setInitialData(updated);
       setFormData(updated);
       setIsEditing(false);
+      setError('');
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update profile.');
     }

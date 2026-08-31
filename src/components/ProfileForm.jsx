@@ -41,6 +41,7 @@ export function ProfileForm({
                 label="Phone" 
                 name="phone"
                 type="tel"
+                maxLength={10}
                 value={formData.phone} 
                 onChange={onChange}
                 disabled={!isEditing} 
