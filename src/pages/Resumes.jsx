@@ -94,10 +94,10 @@ export default function Resumes() {
         }
 
         // 1. Get presigned URL
-        const presignedData = await resumeService.getPresignedUrl(formData.file.name, formData.file.type);
+        const presignedData = await resumeService.getPresignedUrl(formData.file.name, formData.file.type, formData.file.size);
         
         // 2. Upload to Cloudflare R2
-        await resumeService.uploadToCloudflare(presignedData.uploadUrl, formData.file);
+        await resumeService.uploadToCloudflare(presignedData.presignedUrl, formData.file);
 
         // 3. Save metadata to DB
         await resumeService.createResumeRecord({

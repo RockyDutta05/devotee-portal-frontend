@@ -12,10 +12,11 @@ const resumeService = {
     return response.data;
   },
 
-  getPresignedUrl: async (fileName, fileType) => {
+  getPresignedUrl: async (fileName, fileType, contentLength) => {
     const response = await api.post('/resumes/presign-upload', {
       fileName,
-      fileType
+      fileType,
+      contentLength
     });
     return response.data;
   },
