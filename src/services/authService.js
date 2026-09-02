@@ -1,35 +1,53 @@
-import api from './api';
+import { auth } from '../firebase';
+import { 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signOut, 
+  onAuthStateChanged 
+} from 'firebase/auth';
 
 const authService = {
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    return response.data;
+    try {
+      const userCredential = await signInWithEmailAndPassword(auth, credentials.email, credentials.password);
+      return userCredential.user;
+    } catch (error) {
+      console.error("Login error", error);
+      throw error;
+    }
   },
   
   signup: async (userData) => {
-    const response = await api.post('/auth/signup', userData);
-    return response.data;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+      // Optional: add more user details to Firestore here if needed
+      return userCredential.user;
+    } catch (error) {
+      console.error("Signup error", error);
+      throw error;
+    }
   },
 
-  logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  logout: async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error("Logout error", error);
+      throw error;
+    }
   },
 
   getCurrentUser: () => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        return JSON.parse(userStr);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
+    return auth.currentUser;
   },
   
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return !!auth.currentUser;
+  },
+
+  // Helper for components to listen to auth state
+  onAuthStateChange: (callback) => {
+    return onAuthStateChanged(auth, callback);
   }
 };
 
