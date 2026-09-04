@@ -19,9 +19,10 @@ export default function Signup() {
     initiatedName: '',
     email: '',
     phone: '',
-    chantingRounds: '16',
+    chantingRounds: '',
     connectedToName: '',
     connectedToContact: '',
+    connectedToTemple: '',
     currentEmployer: '',
     hideEmployer: false,
     password: '',
@@ -54,13 +55,14 @@ export default function Signup() {
 
   const validateStep2 = () => {
     const newErrors = {};
-    const rounds = parseInt(formData.chantingRounds, 10);
-    if (isNaN(rounds) || rounds < 0 || rounds > 128) {
-      newErrors.chantingRounds = 'Rounds must be between 0 and 128';
+    const rounds = formData.chantingRounds === '' ? NaN : parseInt(formData.chantingRounds, 10);
+    if (isNaN(rounds) || rounds < 0 || rounds > 64) {
+      newErrors.chantingRounds = 'Rounds must be between 0 and 64';
     }
     if (!formData.connectedToName.trim()) newErrors.connectedToName = 'Counselor/Mentor name is required';
     if (!formData.connectedToContact.trim()) newErrors.connectedToContact = 'Counselor/Mentor contact is required';
     else if (!/^\d{10}$/.test(formData.connectedToContact.trim())) newErrors.connectedToContact = 'Contact must be exactly 10 digits';
+    if (!formData.connectedToTemple.trim()) newErrors.connectedToTemple = 'Temple name is required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -175,11 +177,11 @@ export default function Signup() {
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Spiritual &amp; Community Connection</h3>
             <Input 
-              label="Number of rounds of chanting (0-128)" 
+              label="Number of rounds of chanting" 
               type="number" 
               name="chantingRounds" 
               min="0" 
-              max="128" 
+              max="64" 
               value={formData.chantingRounds} 
               onChange={handleChange} 
               error={errors.chantingRounds}
@@ -195,14 +197,22 @@ export default function Signup() {
               required 
             />
             <Input 
-              label="Connected To (10-digit Mobile Number)" 
+              label="Mobile no of whom with which you are connected" 
               type="tel"
               name="connectedToContact" 
               maxLength={10}
-              placeholder="10-DIGIT MOBILE NUMBER" 
               value={formData.connectedToContact} 
               onChange={handleChange} 
               error={errors.connectedToContact}
+              required 
+            />
+            <Input 
+              label="Temple name of whom with which you are connected" 
+              name="connectedToTemple" 
+              placeholder="e.g. ISKCON Juhu, Mumbai"
+              value={formData.connectedToTemple} 
+              onChange={handleChange} 
+              error={errors.connectedToTemple}
               required 
             />
           </div>
@@ -249,7 +259,7 @@ export default function Signup() {
                 <div className="text-gray-600 font-bold">Rounds</div>
                 <div className="col-span-2 font-semibold text-gray-950">{formData.chantingRounds}</div>
                 <div className="text-gray-600 font-bold">Connected To</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.connectedToName} ({formData.connectedToContact})</div>
+                <div className="col-span-2 font-semibold text-gray-950">{formData.connectedToName} ({formData.connectedToContact}) - {formData.connectedToTemple}</div>
                 <div className="text-gray-600 font-bold">Employer</div>
                 <div className="col-span-2 font-semibold text-gray-950">{formData.currentEmployer || 'None'} {formData.hideEmployer && '(Hidden)'}</div>
               </div>

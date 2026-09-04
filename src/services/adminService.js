@@ -1,8 +1,11 @@
 import api from './api';
 
 const adminService = {
-  getPendingSignups: async () => {
-    const response = await api.get('/admin/signups/pending');
+  getPendingSignups: async (search, sortBy) => {
+    const params = {};
+    if (search) params.search = search;
+    if (sortBy) params.sortBy = sortBy;
+    const response = await api.get('/admin/signups/pending', { params });
     return response.data;
   },
 
@@ -13,6 +16,16 @@ const adminService = {
 
   rejectSignup: async (id) => {
     const response = await api.put(`/admin/signups/${id}/reject`);
+    return response.data;
+  },
+
+  bulkApproveSignups: async (userIds) => {
+    const response = await api.put('/admin/signups/bulk-approve', { userIds });
+    return response.data;
+  },
+
+  bulkRejectSignups: async (userIds, reason) => {
+    const response = await api.put('/admin/signups/bulk-reject', { userIds, reason });
     return response.data;
   },
 
@@ -28,13 +41,25 @@ const adminService = {
     return response.data;
   },
 
-  getReports: async () => {
-    const response = await api.get('/admin/reports'); // Assuming standard REST pattern
+  getReports: async (status, search) => {
+    const params = {};
+    if (status) params.status = status;
+    if (search) params.search = search;
+    const response = await api.get('/admin/reports', { params }); 
     return response.data;
   },
   
   reviewReport: async (id) => {
     const response = await api.put(`/admin/reports/${id}/review`);
+    return response.data;
+  },
+
+  getAuditLogs: async (actionType, startDate, endDate, page = 0, size = 10) => {
+    const params = { page, size };
+    if (actionType) params.actionType = actionType;
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    const response = await api.get('/admin/signups/audit-log', { params });
     return response.data;
   }
 };

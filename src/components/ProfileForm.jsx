@@ -66,17 +66,25 @@ export function ProfileForm({
             disabled={!isEditing} 
           />
           <Input 
-            label="Connected Contact" 
+            label="Mobile no of whom with which you are connected" 
             name="connectedToContact"
             value={formData.connectedToContact} 
             onChange={onChange}
             disabled={!isEditing} 
           />
           <Input 
-            label="Chanting Rounds (0-128)" 
+            label="Temple name of whom with which you are connected" 
+            name="connectedToTemple"
+            placeholder="e.g. ISKCON Juhu, Mumbai"
+            value={formData.connectedToTemple || ''} 
+            onChange={onChange}
+            disabled={!isEditing} 
+          />
+          <Input 
+            label="Chanting Rounds" 
             name="chantingRounds"
             type="number"
-            min="0" max="128"
+            min="0" max="64"
             value={formData.chantingRounds} 
             onChange={onChange}
             disabled={!isEditing} 
