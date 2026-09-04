@@ -3,13 +3,14 @@ import { Link } from 'react-router-dom';
 import { Briefcase, User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
+import { useAuth } from '../context/AuthContext';
 
 export default function Navbar() {
   const navigate = useNavigate();
-  const isAuthenticated = authService.isAuthenticated();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   const handleLogout = () => {
-    authService.logout();
+    logout();
     navigate('/login');
   };
 
@@ -27,6 +28,9 @@ export default function Navbar() {
           <Link to="/referrals" className="text-sm font-medium text-gray-600 hover:text-orange-600">Referrals</Link>
           <Link to="/requests" className="text-sm font-medium text-gray-600 hover:text-orange-600">Requests</Link>
           <Link to="/profile" className="text-sm font-medium text-gray-600 hover:text-orange-600">Profile</Link>
+          {isAdmin && (
+            <Link to="/admin" className="text-sm font-bold text-orange-600 hover:text-orange-700">Admin Panel</Link>
+          )}
         </div>
         <div className="flex items-center gap-4">
           {isAuthenticated ? (

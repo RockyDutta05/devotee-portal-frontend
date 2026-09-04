@@ -29,6 +29,11 @@ const jobService = {
   getCompanies: async (search = '') => {
     const response = await api.get(`/companies?search=${encodeURIComponent(search)}`);
     return response.data;
+  },
+
+  createCompany: async (companyData) => {
+    const response = await api.post('/companies', companyData);
+    return response.data;
   }
 };
 

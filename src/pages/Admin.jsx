@@ -77,6 +77,18 @@ export default function Admin() {
     }
   };
 
+  const handleAddCompany = async () => {
+    const name = prompt("Enter the name of the new master company:");
+    if (!name || name.trim() === '') return;
+    try {
+      await jobService.createCompany({ name: name.trim() });
+      alert("Company added successfully!");
+      fetchData();
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to add company.");
+    }
+  };
+
   const navItems = [
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'signups', label: 'Pending Signups', icon: Users },
@@ -227,7 +239,7 @@ export default function Admin() {
           <div className="space-y-6">
             <div className="flex justify-between items-center">
               <h1 className="text-2xl font-bold text-gray-900">Master Companies</h1>
-              <Button size="sm"><Building className="h-4 w-4 mr-2" /> Add Company</Button>
+              <Button size="sm" onClick={handleAddCompany}><Building className="h-4 w-4 mr-2" /> Add Company</Button>
             </div>
             
             <Card>

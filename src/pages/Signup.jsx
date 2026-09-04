@@ -60,6 +60,7 @@ export default function Signup() {
     }
     if (!formData.connectedToName.trim()) newErrors.connectedToName = 'Counselor/Mentor name is required';
     if (!formData.connectedToContact.trim()) newErrors.connectedToContact = 'Counselor/Mentor contact is required';
+    else if (!/^\d{10}$/.test(formData.connectedToContact.trim())) newErrors.connectedToContact = 'Contact must be exactly 10 digits';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -194,9 +195,11 @@ export default function Signup() {
               required 
             />
             <Input 
-              label="Connected To (Contact Details)" 
+              label="Connected To (10-digit Mobile Number)" 
+              type="tel"
               name="connectedToContact" 
-              placeholder="Phone number, email, or temple location" 
+              maxLength={10}
+              placeholder="10-DIGIT MOBILE NUMBER" 
               value={formData.connectedToContact} 
               onChange={handleChange} 
               error={errors.connectedToContact}

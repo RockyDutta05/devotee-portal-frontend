@@ -115,6 +115,18 @@ export default function Jobs() {
     }
   };
 
+  const handleApply = (job) => {
+    const link = job.jobIdOrLink || job.jobIdLink;
+    if (link && link.startsWith('http')) {
+      window.open(link, '_blank', 'noopener,noreferrer');
+    } else if (link) {
+      navigator.clipboard.writeText(link).catch(() => {});
+      alert(`Job ID "${link}" copied to clipboard!\nUse this to reference the job when contacting the poster or applying on the company site.`);
+    } else {
+      alert('No specific link provided. Please read the description or use the Referrals tab to find someone at this company.');
+    }
+  };
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -282,7 +294,7 @@ export default function Jobs() {
                       )}
                     </div>
                     
-                    <Button variant="outline" className="text-sm">Apply / Details</Button>
+                    <Button variant="outline" className="text-sm" onClick={() => handleApply(job)}>Apply / Details</Button>
                   </div>
                 </CardContent>
               </Card>

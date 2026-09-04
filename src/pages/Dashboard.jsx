@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/Card';
@@ -8,6 +8,8 @@ import {
   ChevronRight, Edit, Upload, Search, 
   UserPlus, MessageSquare, MapPin, Building
 } from 'lucide-react';
+import jobService from '../services/jobService';
+import profileService from '../services/profileService';
 
 const StatBox = ({ title, value, icon: Icon, colorClass }) => (
   <Card>
@@ -25,10 +27,29 @@ const StatBox = ({ title, value, icon: Icon, colorClass }) => (
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [profileCompletion, setProfileCompletion] = useState(0);
   
-  // Mock Data
+  useEffect(() => {
+    // Fetch profile for accurate completion stats
+    profileService.getMe().then(data => {
+      let filled = 0;
+      const fields = ['name', 'email', 'phone', 'initiatedName', 'chantingRounds', 'connectedToName', 'connectedToContact', 'currentEmployer', 'jobTitle', 'location'];
+      fields.forEach(field => {
+        if (data[field] !== null && data[field] !== undefined && data[field] !== '') filled++;
+      });
+      setProfileCompletion(Math.round((filled / fields.length) * 100));
+    }).catch(err => console.error("Failed to load profile for dashboard", err));
+
+    jobService.getJobs().then(jobs => {
+      // Sort by newest and take top 3
+      const sorted = jobs.sort((a, b) => new Date(b.createdAt || b.postedAt || 0) - new Date(a.createdAt || a.postedAt || 0));
+      setRecentJobs(sorted.slice(0, 3));
+    }).catch(err => console.error("Failed to load jobs for dashboard", err));
+  }, []);
+
+  // Mock Data for stats
   const stats = {
-    profileCompletion: 85,
     availableJobs: 142,
     myResumes: 2,
     referralOpportunities: 89,
@@ -36,11 +57,18 @@ export default function Dashboard() {
     pendingContacts: 3
   };
 
-  const recentJobs = [
-    { id: 1, title: 'Senior React Developer', company: 'TechCorp Solutions', location: 'Remote', status: 'Urgently Hiring', timeAgo: '2 hours ago' },
-    { id: 2, title: 'Product Manager', company: 'InnovateX', location: 'New York, NY', status: 'Hiring', timeAgo: '5 hours ago' },
-    { id: 3, title: 'Data Engineer', company: 'Global Systems', location: 'London, UK', status: 'Hiring', timeAgo: '1 day ago' }
-  ];
+  const formatDate = (dateString) => {
+    if (!dateString) return 'Recently';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (hours < 24) return `${Math.max(1, hours)} hours ago`;
+    if (days === 1) return 'Yesterday';
+    return `${days} days ago`;
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -57,9 +85,9 @@ export default function Dashboard() {
           <div className="relative h-14 w-14 flex items-center justify-center">
             <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
               <path className="text-orange-200" strokeWidth="3" stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
-              <path className="text-orange-600" strokeWidth="3" strokeDasharray={`${stats.profileCompletion}, 100`} stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path className="text-orange-600" strokeWidth="3" strokeDasharray={`${profileCompletion}, 100`} stroke="currentColor" fill="none" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
             </svg>
-            <span className="absolute text-sm font-bold text-orange-700">{stats.profileCompletion}%</span>
+            <span className="absolute text-sm font-bold text-orange-700">{profileCompletion}%</span>
           </div>
           <div>
             <p className="font-semibold text-gray-900">Profile Completion</p>
@@ -126,17 +154,19 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-gray-900 text-lg">{job.title}</h4>
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                        {job.status}
+                        {job.status || 'Hiring'}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
-                      <span className="flex items-center gap-1"><Building className="h-4 w-4" /> {job.company}</span>
-                      <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {job.location}</span>
+                      <span className="flex items-center gap-1"><Building className="h-4 w-4" /> {job.company?.name || job.company}</span>
+                      <span className="flex items-center gap-1"><MapPin className="h-4 w-4" /> {job.location || 'Remote'}</span>
                     </div>
                   </div>
                   <div className="flex items-center gap-4 md:flex-col md:items-end">
-                    <span className="text-xs text-gray-400">{job.timeAgo}</span>
-                    <Button variant="outline" className="text-sm py-1.5">View Details</Button>
+                    <span className="text-xs text-gray-400">{formatDate(job.createdAt || job.postedAt)}</span>
+                    <Link to="/jobs">
+                      <Button variant="outline" className="text-sm py-1.5">View Details</Button>
+                    </Link>
                   </div>
                 </div>
               ))}
@@ -162,7 +192,9 @@ export default function Dashboard() {
                   "Hi, I would love to connect to discuss the software engineering role at your company."
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
+                  <Link to="/requests" className="w-full">
+                    <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
+                  </Link>
                 </div>
               </div>
 
@@ -177,7 +209,9 @@ export default function Dashboard() {
                   "I have applied for the Product Manager role. Please refer me."
                 </p>
                 <div className="flex gap-2">
-                  <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
+                  <Link to="/requests" className="w-full">
+                    <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
+                  </Link>
                 </div>
               </div>
 

@@ -92,9 +92,23 @@ export function ProfileForm({
         ) : (
           <div className="space-y-4">
             <Input 
+              label="Job Title" 
+              name="jobTitle"
+              value={formData.jobTitle || ''} 
+              onChange={onChange}
+              disabled={!isEditing} 
+            />
+            <Input 
               label="Current Employer" 
               name="currentEmployer"
               value={formData.currentEmployer || ''} 
+              onChange={onChange}
+              disabled={!isEditing} 
+            />
+            <Input 
+              label="Location" 
+              name="location"
+              value={formData.location || ''} 
               onChange={onChange}
               disabled={!isEditing} 
             />
