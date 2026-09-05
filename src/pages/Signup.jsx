@@ -13,6 +13,11 @@ export default function Signup() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [serverError, setServerError] = useState('');
+  
+  const [otpSent, setOtpSent] = useState(false);
+  const [otp, setOtp] = useState('');
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -26,14 +31,16 @@ export default function Signup() {
     currentEmployer: '',
     hideEmployer: false,
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    profilePictureFile: null,
+    profilePictureUrl: ''
   });
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type, checked, files } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value
+      [name]: type === 'checkbox' ? checked : type === 'file' ? files[0] : value
     }));
     // Clear error when user types
     if (errors[name]) {
@@ -43,9 +50,16 @@ export default function Signup() {
 
   const validateStep1 = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.email.trim()) newErrors.email = 'Email is required';
     else if (!/^\S+@\S+\.\S+$/.test(formData.email)) newErrors.email = 'Invalid email format';
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const validateStep2 = () => {
+    const newErrors = {};
+    if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
     else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone number must be exactly 10 digits';
     
@@ -53,7 +67,7 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
+  const validateStep3 = () => {
     const newErrors = {};
     const rounds = formData.chantingRounds === '' ? NaN : parseInt(formData.chantingRounds, 10);
     if (isNaN(rounds) || rounds < 0 || rounds > 64) {
@@ -68,7 +82,7 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep3 = () => {
+  const validateStep4 = () => {
     const newErrors = {};
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
@@ -81,11 +95,45 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = () => {
+  const nextStep = async () => {
     let isValid = false;
-    if (step === 1) isValid = validateStep1();
+    if (step === 1) {
+      isValid = validateStep1();
+      if (!isValid) return;
+
+      if (!otpSent) {
+        setIsSendingOtp(true);
+        setServerError('');
+        try {
+          await authService.sendOtp(formData.email);
+          setOtpSent(true);
+        } catch (err) {
+          setServerError(err.response?.data?.message || err.message || 'Failed to send OTP.');
+        } finally {
+          setIsSendingOtp(false);
+        }
+      } else {
+        if (!otp.trim()) {
+          setErrors(prev => ({ ...prev, otp: 'OTP is required' }));
+          return;
+        }
+        setIsVerifyingOtp(true);
+        setServerError('');
+        try {
+          await authService.verifyOtp(formData.email, otp);
+          setStep(prev => prev + 1);
+        } catch (err) {
+          setServerError(err.response?.data?.message || err.message || 'Invalid OTP.');
+        } finally {
+          setIsVerifyingOtp(false);
+        }
+      }
+      return; // Handled async transitions for step 1
+    }
+    
     if (step === 2) isValid = validateStep2();
     if (step === 3) isValid = validateStep3();
+    if (step === 4) isValid = validateStep4();
 
     if (isValid) {
       setStep(prev => prev + 1);
@@ -98,11 +146,30 @@ export default function Signup() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step === 4) {
+    if (step === 5) {
       setIsLoading(true);
       setServerError('');
       try {
-        await authService.signup(formData);
+        let finalProfilePictureUrl = formData.profilePictureUrl;
+        
+        // Upload profile picture if provided
+        if (formData.profilePictureFile) {
+          const presignedData = await authService.getPresignedProfileUrl(
+            formData.profilePictureFile.name,
+            formData.profilePictureFile.type,
+            formData.profilePictureFile.size
+          );
+          await authService.uploadProfileToCloudflare(presignedData.presignedUrl, formData.profilePictureFile);
+          finalProfilePictureUrl = presignedData.fileUrl;
+        }
+
+        const submitData = {
+          ...formData,
+          profilePictureUrl: finalProfilePictureUrl
+        };
+        delete submitData.profilePictureFile; // Clean up before sending
+
+        await authService.signup(submitData);
         setIsSubmitted(true);
         setTimeout(() => {
           navigate('/pending-approval');
@@ -141,13 +208,13 @@ export default function Signup() {
         <div className="inline-flex items-center justify-center h-14 w-14 bg-orange-100 rounded-full mb-4 border border-orange-200">
           <span className="text-2xl">🕉️</span>
         </div>
-        <h2 className="text-3xl font-extrabold text-gray-950 tracking-tight">Create an Account</h2>
-        <p className="text-gray-700 font-semibold mt-1">Step {step} of 4</p>
+        <h2 className="text-3xl font-extrabold text-gray-950 tracking-tight">Create Account</h2>
+        {step > 1 && <p className="text-gray-700 font-semibold mt-1">Step {step} of 5</p>}
         {/* Progress bar */}
         <div className="w-full bg-gray-200 rounded-full h-2.5 mt-6">
           <div
             className="bg-orange-600 h-2.5 rounded-full transition-all duration-300"
-            style={{ width: `${(step / 4) * 100}%` }}
+            style={{ width: `${(step / 5) * 100}%` }}
           ></div>
         </div>
       </div>
@@ -163,17 +230,41 @@ export default function Signup() {
 
         {step === 1 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Personal Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Legal Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} placeholder="ENTER YOUR NAME" required />
-              <Input label="Initiated Name (Optional)" name="initiatedName" value={formData.initiatedName} onChange={handleChange} placeholder="IF ANY" />
-            </div>
-            <Input label="Email Address" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} placeholder="ENTER YOUR EMAIL" required />
-            <Input label="Phone Number" type="tel" name="phone" maxLength={10} value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="10-DIGIT PHONE NUMBER" required />
+            <Input label="Enter email address" type="email" name="email" value={formData.email} onChange={handleChange} error={errors.email} placeholder="you@example.com" disabled={otpSent} required />
+            
+            {otpSent && (
+              <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+                <Input label="Enter the OTP" type="text" name="otp" value={otp} onChange={(e) => { setOtp(e.target.value); if(errors.otp) setErrors(prev => ({...prev, otp: ''})) }} error={errors.otp} placeholder="4-digit code" required />
+                <p className="text-xs text-gray-500 mt-2 font-medium">An OTP has been sent to your email. Please check your inbox (and spam folder).</p>
+              </div>
+            )}
           </div>
         )}
 
         {step === 2 && (
+          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Personal Information</h3>
+            
+            <div className="w-full flex flex-col gap-1 mb-4">
+              <label className="text-sm font-semibold text-gray-700">Profile Picture (Optional)</label>
+              <input 
+                type="file" 
+                name="profilePictureFile"
+                accept="image/*"
+                onChange={handleChange}
+                className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-orange-50 file:text-orange-700 file:font-semibold file:mr-4 file:px-4 file:py-1 file:rounded-full hover:file:bg-orange-100"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Input label="Legal Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} placeholder="ENTER YOUR NAME" required />
+              <Input label="Initiated Name (Optional)" name="initiatedName" value={formData.initiatedName} onChange={handleChange} placeholder="IF ANY" />
+            </div>
+            <Input label="Phone Number" type="tel" name="phone" maxLength={10} value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="10-DIGIT PHONE NUMBER" required />
+          </div>
+        )}
+
+        {step === 3 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Spiritual &amp; Community Connection</h3>
             <Input 
@@ -218,34 +309,16 @@ export default function Signup() {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Account Details</h3>
-            <Input 
-              label="Current Employer (Optional)" 
-              name="currentEmployer" 
-              placeholder="e.g. Google, Microsoft" 
-              value={formData.currentEmployer} 
-              onChange={handleChange} 
-            />
-            <div className="flex items-center gap-2 mb-4">
-              <input 
-                type="checkbox" 
-                id="hideEmployer" 
-                name="hideEmployer"
-                checked={formData.hideEmployer}
-                onChange={handleChange}
-                className="h-4 w-4 text-orange-600 rounded border-gray-300 focus:ring-orange-500"
-              />
-              <label htmlFor="hideEmployer" className="text-sm font-semibold text-gray-900">Hide my employer from public view</label>
-            </div>
             
             <Input label="Password" type="password" name="password" value={formData.password} onChange={handleChange} error={errors.password} placeholder="••••••••" required />
             <Input label="Confirm Password" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} placeholder="••••••••" required />
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
             <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Review &amp; Submit</h3>
             <div className="bg-orange-50 p-6 rounded-xl space-y-4 text-sm border border-orange-100">
@@ -260,8 +333,8 @@ export default function Signup() {
                 <div className="col-span-2 font-semibold text-gray-950">{formData.chantingRounds}</div>
                 <div className="text-gray-600 font-bold">Connected To</div>
                 <div className="col-span-2 font-semibold text-gray-950">{formData.connectedToName} ({formData.connectedToContact}) - {formData.connectedToTemple}</div>
-                <div className="text-gray-600 font-bold">Employer</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.currentEmployer || 'None'} {formData.hideEmployer && '(Hidden)'}</div>
+                <div className="text-gray-600 font-bold">Profile Pic</div>
+                <div className="col-span-2 font-semibold text-gray-950">{formData.profilePictureFile ? formData.profilePictureFile.name : 'None provided'}</div>
               </div>
             </div>
             <p className="text-sm text-gray-700 font-medium text-center">
@@ -279,9 +352,11 @@ export default function Signup() {
             <div></div> 
           )}
           
-          {step < 4 ? (
-            <Button type="button" onClick={nextStep} className="flex items-center gap-2">
-              Next <ChevronRight className="h-4 w-4" />
+          {step < 5 ? (
+            <Button type="button" onClick={nextStep} disabled={isSendingOtp || isVerifyingOtp} className={step === 1 ? "w-full" : "flex items-center gap-2"}>
+              {step === 1 ? (
+                isSendingOtp ? "Sending..." : isVerifyingOtp ? "Verifying..." : !otpSent ? "Send OTP" : "Verify & Continue ->"
+              ) : <><span className="mr-2">Next</span><ChevronRight className="h-4 w-4" /></>}
             </Button>
           ) : (
             <Button type="submit" disabled={isLoading} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
