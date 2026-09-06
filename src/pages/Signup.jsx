@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Input from '../components/Input';
 import Button from '../components/Button';
-import { CheckCircle2, ChevronRight, ChevronLeft, AlertCircle } from 'lucide-react';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
 import WatermarkBackground from '../components/WatermarkBackground';
 import authService from '../services/authService';
 
@@ -57,18 +57,12 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const validateStep2 = () => {
+  const validateForm = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Name is required';
     if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
     else if (!/^\d{10}$/.test(formData.phone.trim())) newErrors.phone = 'Phone number must be exactly 10 digits';
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep3 = () => {
-    const newErrors = {};
     const rounds = formData.chantingRounds === '' ? NaN : parseInt(formData.chantingRounds, 10);
     if (isNaN(rounds) || rounds < 0 || rounds > 64) {
       newErrors.chantingRounds = 'Rounds must be between 0 and 64';
@@ -78,12 +72,6 @@ export default function Signup() {
     else if (!/^\d{10}$/.test(formData.connectedToContact.trim())) newErrors.connectedToContact = 'Contact must be exactly 10 digits';
     if (!formData.connectedToTemple.trim()) newErrors.connectedToTemple = 'Temple name is required';
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const validateStep4 = () => {
-    const newErrors = {};
     if (!formData.password) newErrors.password = 'Password is required';
     else if (formData.password.length < 6) newErrors.password = 'Password must be at least 6 characters';
     
@@ -95,58 +83,45 @@ export default function Signup() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const nextStep = async () => {
-    let isValid = false;
-    if (step === 1) {
-      isValid = validateStep1();
-      if (!isValid) return;
+  const handleNextStep1 = async () => {
+    const isValid = validateStep1();
+    if (!isValid) return;
 
-      if (!otpSent) {
-        setIsSendingOtp(true);
-        setServerError('');
-        try {
-          await authService.sendOtp(formData.email);
-          setOtpSent(true);
-        } catch (err) {
-          setServerError(err.response?.data?.message || err.message || 'Failed to send OTP.');
-        } finally {
-          setIsSendingOtp(false);
-        }
-      } else {
-        if (!otp.trim()) {
-          setErrors(prev => ({ ...prev, otp: 'OTP is required' }));
-          return;
-        }
-        setIsVerifyingOtp(true);
-        setServerError('');
-        try {
-          await authService.verifyOtp(formData.email, otp);
-          setStep(prev => prev + 1);
-        } catch (err) {
-          setServerError(err.response?.data?.message || err.message || 'Invalid OTP.');
-        } finally {
-          setIsVerifyingOtp(false);
-        }
+    if (!otpSent) {
+      setIsSendingOtp(true);
+      setServerError('');
+      try {
+        await authService.sendOtp(formData.email);
+        setOtpSent(true);
+      } catch (err) {
+        setServerError(err.response?.data?.message || err.message || 'Failed to send OTP.');
+      } finally {
+        setIsSendingOtp(false);
       }
-      return; // Handled async transitions for step 1
+    } else {
+      if (!otp.trim()) {
+        setErrors(prev => ({ ...prev, otp: 'OTP is required' }));
+        return;
+      }
+      setIsVerifyingOtp(true);
+      setServerError('');
+      try {
+        await authService.verifyOtp(formData.email, otp);
+        setStep(2);
+      } catch (err) {
+        setServerError(err.response?.data?.message || err.message || 'Invalid OTP.');
+      } finally {
+        setIsVerifyingOtp(false);
+      }
     }
-    
-    if (step === 2) isValid = validateStep2();
-    if (step === 3) isValid = validateStep3();
-    if (step === 4) isValid = validateStep4();
-
-    if (isValid) {
-      setStep(prev => prev + 1);
-    }
-  };
-
-  const prevStep = () => {
-    setStep(prev => prev - 1);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (step === 5) {
+    if (step === 2) {
+      const isValid = validateForm();
+      if (!isValid) return;
+
       setIsLoading(true);
       setServerError('');
       try {
@@ -209,14 +184,6 @@ export default function Signup() {
           <span className="text-2xl">🕉️</span>
         </div>
         <h2 className="text-3xl font-extrabold text-gray-950 tracking-tight">Create Account</h2>
-        {step > 1 && <p className="text-gray-700 font-semibold mt-1">Step {step} of 5</p>}
-        {/* Progress bar */}
-        <div className="w-full bg-gray-200 rounded-full h-2.5 mt-6">
-          <div
-            className="bg-orange-600 h-2.5 rounded-full transition-all duration-300"
-            style={{ width: `${(step / 5) * 100}%` }}
-          ></div>
-        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -242,124 +209,60 @@ export default function Signup() {
         )}
 
         {step === 2 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Personal Information</h3>
-            
-            <div className="w-full flex flex-col gap-1 mb-4">
-              <label className="text-sm font-semibold text-gray-700">Profile Picture (Optional)</label>
-              <input 
-                type="file" 
-                name="profilePictureFile"
-                accept="image/*"
-                onChange={handleChange}
-                className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-orange-50 file:text-orange-700 file:font-semibold file:mr-4 file:px-4 file:py-1 file:rounded-full hover:file:bg-orange-100"
-              />
+          <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+            {/* Personal Information */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Personal Information</h3>
+              
+              <div className="w-full flex flex-col gap-1 mb-4">
+                <label className="text-sm font-semibold text-gray-700">Profile Picture (Optional)</label>
+                <input 
+                  type="file" 
+                  name="profilePictureFile"
+                  accept="image/*"
+                  onChange={handleChange}
+                  className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm file:border-0 file:bg-orange-50 file:text-orange-700 file:font-semibold file:mr-4 file:px-4 file:py-1 file:rounded-full hover:file:bg-orange-100"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Legal Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} placeholder="ENTER YOUR NAME" required />
+                <Input label="Initiated Name (Optional)" name="initiatedName" value={formData.initiatedName} onChange={handleChange} placeholder="IF ANY" />
+              </div>
+              <Input label="Phone Number" type="tel" name="phone" maxLength={10} value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="10-DIGIT PHONE NUMBER" required />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Input label="Legal Name" name="name" value={formData.name} onChange={handleChange} error={errors.name} placeholder="ENTER YOUR NAME" required />
-              <Input label="Initiated Name (Optional)" name="initiatedName" value={formData.initiatedName} onChange={handleChange} placeholder="IF ANY" />
+            {/* Spiritual Connection */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Spiritual &amp; Community Connection</h3>
+              <Input label="Number of rounds of chanting" type="number" name="chantingRounds" min="0" max="64" value={formData.chantingRounds} onChange={handleChange} error={errors.chantingRounds} required />
+              <Input label="Connected To (Counselor/President/Mentor Name)" name="connectedToName" placeholder="e.g. HG Chaitanya Charan Das" value={formData.connectedToName} onChange={handleChange} error={errors.connectedToName} required />
+              <Input label="Mobile no of whom with which you are connected" type="tel" name="connectedToContact" maxLength={10} value={formData.connectedToContact} onChange={handleChange} error={errors.connectedToContact} required />
+              <Input label="Temple name of whom with which you are connected" name="connectedToTemple" placeholder="e.g. ISKCON Juhu, Mumbai" value={formData.connectedToTemple} onChange={handleChange} error={errors.connectedToTemple} required />
             </div>
-            <Input label="Phone Number" type="tel" name="phone" maxLength={10} value={formData.phone} onChange={handleChange} error={errors.phone} placeholder="10-DIGIT PHONE NUMBER" required />
-          </div>
-        )}
 
-        {step === 3 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Spiritual &amp; Community Connection</h3>
-            <Input 
-              label="Number of rounds of chanting" 
-              type="number" 
-              name="chantingRounds" 
-              min="0" 
-              max="64" 
-              value={formData.chantingRounds} 
-              onChange={handleChange} 
-              error={errors.chantingRounds}
-              required 
-            />
-            <Input 
-              label="Connected To (Counselor/President/Mentor Name)" 
-              name="connectedToName" 
-              placeholder="e.g. HG Chaitanya Charan Das" 
-              value={formData.connectedToName} 
-              onChange={handleChange} 
-              error={errors.connectedToName}
-              required 
-            />
-            <Input 
-              label="Mobile no of whom with which you are connected" 
-              type="tel"
-              name="connectedToContact" 
-              maxLength={10}
-              value={formData.connectedToContact} 
-              onChange={handleChange} 
-              error={errors.connectedToContact}
-              required 
-            />
-            <Input 
-              label="Temple name of whom with which you are connected" 
-              name="connectedToTemple" 
-              placeholder="e.g. ISKCON Juhu, Mumbai"
-              value={formData.connectedToTemple} 
-              onChange={handleChange} 
-              error={errors.connectedToTemple}
-              required 
-            />
-          </div>
-        )}
-
-        {step === 4 && (
-          <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Account Details</h3>
-            
-            <Input label="Password" type="password" name="password" value={formData.password} onChange={handleChange} error={errors.password} placeholder="••••••••" required />
-            <Input label="Confirm Password" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} placeholder="••••••••" required />
-          </div>
-        )}
-
-        {step === 5 && (
-          <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-            <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Review &amp; Submit</h3>
-            <div className="bg-orange-50 p-6 rounded-xl space-y-4 text-sm border border-orange-100">
-              <div className="grid grid-cols-3 gap-y-3 gap-x-4">
-                <div className="text-gray-600 font-bold">Name</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.name}</div>
-                <div className="text-gray-600 font-bold">Email</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.email}</div>
-                <div className="text-gray-600 font-bold">Phone</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.phone}</div>
-                <div className="text-gray-600 font-bold">Rounds</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.chantingRounds}</div>
-                <div className="text-gray-600 font-bold">Connected To</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.connectedToName} ({formData.connectedToContact}) - {formData.connectedToTemple}</div>
-                <div className="text-gray-600 font-bold">Profile Pic</div>
-                <div className="col-span-2 font-semibold text-gray-950">{formData.profilePictureFile ? formData.profilePictureFile.name : 'None provided'}</div>
+            {/* Account Details */}
+            <div className="space-y-4">
+              <h3 className="text-xl font-bold text-gray-950 mb-4 border-b-2 border-orange-200 pb-2">Account Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <Input label="Password" type="password" name="password" value={formData.password} onChange={handleChange} error={errors.password} placeholder="••••••••" required />
+                <Input label="Confirm Password" type="password" name="confirmPassword" value={formData.confirmPassword} onChange={handleChange} error={errors.confirmPassword} placeholder="••••••••" required />
               </div>
             </div>
+
             <p className="text-sm text-gray-700 font-medium text-center">
               By submitting this form, you confirm that the information provided is accurate and you agree to our community guidelines.
             </p>
           </div>
         )}
 
-        <div className="flex justify-between pt-6 border-t mt-8">
-          {step > 1 ? (
-            <Button type="button" variant="ghost" onClick={prevStep} className="flex items-center gap-2">
-              <ChevronLeft className="h-4 w-4" /> Back
+        <div className="flex justify-end pt-6 border-t mt-8">
+          {step === 1 ? (
+            <Button type="button" onClick={handleNextStep1} disabled={isSendingOtp || isVerifyingOtp} className="w-full">
+              {isSendingOtp ? "Sending..." : isVerifyingOtp ? "Verifying..." : !otpSent ? "Send OTP" : "Verify & Continue ->"}
             </Button>
           ) : (
-            <div></div> 
-          )}
-          
-          {step < 5 ? (
-            <Button type="button" onClick={nextStep} disabled={isSendingOtp || isVerifyingOtp} className={step === 1 ? "w-full" : "flex items-center gap-2"}>
-              {step === 1 ? (
-                isSendingOtp ? "Sending..." : isVerifyingOtp ? "Verifying..." : !otpSent ? "Send OTP" : "Verify & Continue ->"
-              ) : <><span className="mr-2">Next</span><ChevronRight className="h-4 w-4" /></>}
-            </Button>
-          ) : (
-            <Button type="submit" disabled={isLoading} className="flex items-center gap-2 bg-green-600 hover:bg-green-700">
+            <Button type="submit" disabled={isLoading} className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 w-full md:w-auto px-8">
               {isLoading ? 'Submitting...' : 'Submit Registration'}
             </Button>
           )}
