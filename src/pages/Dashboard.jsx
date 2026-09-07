@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import jobService from '../services/jobService';
 import profileService from '../services/profileService';
+import dashboardService from '../services/dashboardService';
 
 const StatBox = ({ title, value, icon: Icon, colorClass }) => (
   <Card>
@@ -30,6 +31,14 @@ export default function Dashboard() {
   const [recentJobs, setRecentJobs] = useState([]);
   const [profileCompletion, setProfileCompletion] = useState(0);
   
+  const [stats, setStats] = useState({
+    availableJobs: 0,
+    myResumes: 0,
+    referralOpportunities: 0,
+    pendingReferrals: 0,
+    pendingContacts: 0
+  });
+  
   useEffect(() => {
     // Fetch profile for accurate completion stats
     profileService.getMe().then(data => {
@@ -46,16 +55,11 @@ export default function Dashboard() {
       const sorted = jobs.sort((a, b) => new Date(b.createdAt || b.postedAt || 0) - new Date(a.createdAt || a.postedAt || 0));
       setRecentJobs(sorted.slice(0, 3));
     }).catch(err => console.error("Failed to load jobs for dashboard", err));
-  }, []);
 
-  // Mock Data for stats
-  const stats = {
-    availableJobs: 142,
-    myResumes: 2,
-    referralOpportunities: 89,
-    pendingReferrals: 1,
-    pendingContacts: 3
-  };
+    dashboardService.getStats().then(data => {
+      if (data) setStats(data);
+    }).catch(err => console.error("Failed to load dashboard stats", err));
+  }, []);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently';

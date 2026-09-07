@@ -7,6 +7,7 @@ import { UserPlus, Search, Building, Plus, Trash2, ShieldAlert, Send } from 'luc
 import referralService from '../services/referralService';
 import profileService from '../services/profileService';
 import { useAuth } from '../context/AuthContext';
+import requestService from '../services/requestService';
 
 export default function Referrals() {
   const { user } = useAuth();
@@ -26,6 +27,12 @@ export default function Referrals() {
   const [requestsUsed, setRequestsUsed] = useState(0);
   const [requestLimit, setRequestLimit] = useState(3);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Networking Modal State
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [isConnectModalOpen, setIsConnectModalOpen] = useState(false);
+  const [contactReason, setContactReason] = useState('');
+  const [connectMessage, setConnectMessage] = useState('');
 
   useEffect(() => {
     fetchInitialData();
@@ -118,9 +125,25 @@ export default function Referrals() {
     
     setIsSubmitting(true);
     try {
+      // Resolve company name to companyId
+      const { default: jobService } = await import('../services/jobService');
+      const companiesData = await jobService.getCompanies();
+      const existingCompany = companiesData.find(c => c.name.toLowerCase() === formData.company.trim().toLowerCase());
+      
+      let finalCompanyId = null;
+      if (existingCompany) {
+        finalCompanyId = existingCompany.id;
+      } else {
+        const newCreatedCompany = await jobService.createCompany({ name: formData.company.trim() });
+        finalCompanyId = newCreatedCompany.id;
+      }
+
       await referralService.createReferralRequest({
-        ...formData,
-        referrerId: selectedReferrer.userId || selectedReferrer.id
+        referrerId: selectedReferrer.userId || selectedReferrer.id,
+        companyId: finalCompanyId,
+        jobIdOrLink: formData.jobIdLink,
+        jobTitle: formData.jobTitle,
+        comments: formData.comments
       });
       setRequestsUsed(prev => prev + 1);
       setIsModalOpen(false);
@@ -128,6 +151,36 @@ export default function Referrals() {
       setFormData({ jobTitle: '', jobIdLink: '', company: '', comments: '' });
     } catch (error) {
       alert(error.response?.data?.message || "Failed to send referral request");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleContactSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await requestService.createContactRequest(selectedReferrer.userId || selectedReferrer.id, contactReason);
+      setIsContactModalOpen(false);
+      alert(`Contact info request sent to ${selectedReferrer.name}!`);
+      setContactReason('');
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to send contact info request");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleConnectSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    try {
+      await requestService.createConnectRequest(selectedReferrer.userId || selectedReferrer.id, connectMessage);
+      setIsConnectModalOpen(false);
+      alert(`Connect request sent to ${selectedReferrer.name}!`);
+      setConnectMessage('');
+    } catch (error) {
+      alert(error.response?.data?.message || "Failed to send connect request");
     } finally {
       setIsSubmitting(false);
     }
@@ -281,9 +334,19 @@ export default function Referrals() {
                             );
                           })}
                         </div>
-                        <Button size="sm" className="w-full text-xs" onClick={() => handleOpenRequest(r)}>
-                          Request Referral
-                        </Button>
+                        <div className="flex flex-col gap-2 mt-auto">
+                          <Button size="sm" className="w-full text-xs" onClick={() => handleOpenRequest(r)}>
+                            Request Referral
+                          </Button>
+                          <div className="flex gap-2">
+                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setSelectedReferrer(r); setIsContactModalOpen(true); }}>
+                              Contact Info
+                            </Button>
+                            <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setSelectedReferrer(r); setIsConnectModalOpen(true); }}>
+                              Connect
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -309,9 +372,19 @@ export default function Referrals() {
                           </span>
                         )}
                       </div>
-                      <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleOpenRequest(r)}>
-                        Ask to connect
-                      </Button>
+                      <div className="flex flex-col gap-2 mt-auto">
+                        <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => handleOpenRequest(r)}>
+                          Request Referral
+                        </Button>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setSelectedReferrer(r); setIsContactModalOpen(true); }}>
+                            Contact Info
+                          </Button>
+                          <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => { setSelectedReferrer(r); setIsConnectModalOpen(true); }}>
+                            Connect
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ))}
                   {generalReferrers.length === 0 && !priorityReferrers.length && (
@@ -394,6 +467,66 @@ export default function Referrals() {
                   <Send className="h-4 w-4" /> {isSubmitting ? 'Sending...' : 'Send Request'}
                 </Button>
               </div>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Contact Info Request Modal */}
+      <Modal isOpen={isContactModalOpen} onClose={() => setIsContactModalOpen(false)} title="Request Contact Info">
+        {selectedReferrer && (
+          <form onSubmit={handleContactSubmit} className="space-y-4 mt-2">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 text-sm text-blue-800">
+              You are requesting contact info from <strong>{selectedReferrer.name}</strong>.
+            </div>
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Reason for Requesting</label>
+              <textarea 
+                value={contactReason}
+                onChange={e => setContactReason(e.target.value)} 
+                rows={4}
+                required
+                className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Briefly explain why you need their contact info."
+              />
+            </div>
+            <div className="flex justify-end pt-4 border-t mt-6 gap-3">
+              <Button type="button" variant="ghost" onClick={() => setIsContactModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
+                <Send className="h-4 w-4" /> {isSubmitting ? 'Sending...' : 'Send Request'}
+              </Button>
+            </div>
+          </form>
+        )}
+      </Modal>
+
+      {/* Connect Request Modal */}
+      <Modal isOpen={isConnectModalOpen} onClose={() => setIsConnectModalOpen(false)} title="Connect with Devotee">
+        {selectedReferrer && (
+          <form onSubmit={handleConnectSubmit} className="space-y-4 mt-2">
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4 text-sm text-blue-800">
+              You are sending a connection request to <strong>{selectedReferrer.name}</strong>.
+            </div>
+            <div className="w-full flex flex-col gap-1">
+              <label className="text-sm font-medium text-gray-700">Message</label>
+              <textarea 
+                value={connectMessage}
+                onChange={e => setConnectMessage(e.target.value)} 
+                rows={4}
+                required
+                className="flex w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Introduce yourself and say hi!"
+              />
+            </div>
+            <div className="flex justify-end pt-4 border-t mt-6 gap-3">
+              <Button type="button" variant="ghost" onClick={() => setIsConnectModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting} className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700">
+                <Send className="h-4 w-4" /> {isSubmitting ? 'Sending...' : 'Send Connect Request'}
+              </Button>
             </div>
           </form>
         )}

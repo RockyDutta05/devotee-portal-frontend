@@ -56,11 +56,21 @@ export default function Requests() {
     }
   };
 
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const utcDateString = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+    return new Date(utcDateString).toLocaleString(undefined, { 
+      year: 'numeric', month: 'short', day: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'PENDING':
         return <span className="px-2 py-1 rounded text-xs font-semibold bg-yellow-100 text-yellow-800">Pending Review</span>;
       case 'APPROVED':
+      case 'ACCEPTED':
         return <span className="px-2 py-1 rounded text-xs font-semibold bg-green-100 text-green-800">Approved</span>;
       case 'REJECTED':
         return <span className="px-2 py-1 rounded text-xs font-semibold bg-red-100 text-red-800">Rejected</span>;
@@ -115,8 +125,9 @@ export default function Requests() {
                         <h3 className="font-bold text-lg text-gray-900">{req.requesterName || req.requester?.name || 'User'}</h3>
                         {getStatusBadge(req.status)}
                       </div>
+                      <div className="text-xs text-gray-400 mb-2">{formatDate(req.createdAt)}</div>
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-2">
-                        <span className="flex items-center gap-1 font-medium"><Building className="h-4 w-4" /> {req.company}</span>
+                        <span className="flex items-center gap-1 font-medium"><Building className="h-4 w-4" /> {req.company?.name || req.company}</span>
                         <span className="flex items-center gap-1"><FileText className="h-4 w-4" /> {req.jobTitle}</span>
                       </div>
                       <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-700 border border-gray-100">
@@ -156,20 +167,21 @@ export default function Requests() {
                         <h3 className="font-bold text-lg text-gray-900">{req.requesterName || req.requester?.name || 'User'}</h3>
                         {getStatusBadge(req.status)}
                       </div>
+                      <div className="text-xs text-gray-400">{formatDate(req.createdAt)}</div>
                       <p className="text-sm text-gray-700">
                         <span className="font-semibold">Reason:</span> {req.reason}
                       </p>
                       
                       {/* Masked vs Unmasked Details */}
-                      <div className={`p-4 rounded-xl border ${req.status === 'APPROVED' ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className={`p-4 rounded-xl border ${(req.status === 'APPROVED' || req.status === 'ACCEPTED') ? 'bg-green-50 border-green-200' : 'bg-gray-50 border-gray-200'}`}>
                         <div className="flex items-center gap-2 mb-2 font-semibold text-gray-900 text-sm">
-                          {req.status === 'APPROVED' ? <Unlock className="h-4 w-4 text-green-600" /> : <Lock className="h-4 w-4 text-gray-500" />}
+                          {(req.status === 'APPROVED' || req.status === 'ACCEPTED') ? <Unlock className="h-4 w-4 text-green-600" /> : <Lock className="h-4 w-4 text-gray-500" />}
                           Contact Information
                         </div>
-                        {req.status === 'APPROVED' ? (
+                        {(req.status === 'APPROVED' || req.status === 'ACCEPTED') ? (
                           <div className="text-sm space-y-1 text-gray-700 font-medium">
-                            <p>Email: <a href={`mailto:${req.email || req.requester?.email}`} className="text-orange-600 hover:underline">{req.email || req.requester?.email}</a></p>
-                            <p>Phone: {req.phone || req.requester?.phone}</p>
+                            <p>Email: <a href={`mailto:${req.requesterEmail || req.email || req.requester?.email}`} className="text-orange-600 hover:underline">{req.requesterEmail || req.email || req.requester?.email}</a></p>
+                            <p>Phone: {req.requesterPhone || req.phone || req.requester?.phone}</p>
                           </div>
                         ) : (
                           <p className="text-sm text-gray-500 italic">
