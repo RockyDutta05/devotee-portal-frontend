@@ -11,6 +11,11 @@ const jobService = {
     return response.data;
   },
 
+  getStatuses: async () => {
+    const response = await api.get('/jobs/statuses');
+    return response.data;
+  },
+
   createJob: async (jobData) => {
     const response = await api.post('/jobs', jobData);
     return response.data;

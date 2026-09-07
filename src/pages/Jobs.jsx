@@ -11,6 +11,7 @@ const mockStatuses = ['Urgently Hiring', 'Hiring', 'Position Filled'];
 export default function Jobs() {
   const [jobs, setJobs] = useState([]);
   const [companies, setCompanies] = useState([]);
+  const [jobStatuses, setJobStatuses] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({
@@ -41,12 +42,19 @@ export default function Jobs() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [jobsData, companiesData] = await Promise.all([
+      const [jobsData, companiesData, statusesData] = await Promise.all([
         jobService.getJobs(),
-        jobService.getCompanies()
+        jobService.getCompanies(),
+        jobService.getStatuses().catch(() => []) // Gracefully fail if endpoint missing
       ]);
       setJobs(jobsData);
       setCompanies(companiesData);
+      if (statusesData && statusesData.length > 0) {
+        setJobStatuses(statusesData);
+        if (!formData.status) {
+          setFormData(prev => ({ ...prev, status: statusesData[0].label }));
+        }
+      }
     } catch (error) {
       console.error("Failed to fetch jobs/companies", error);
     } finally {
@@ -91,18 +99,43 @@ export default function Jobs() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
+      // 1. Resolve Company ID
+      let finalCompanyId = null;
+      const existingCompany = companies.find(c => c.name.toLowerCase() === formData.company.toLowerCase());
+      if (existingCompany) {
+        finalCompanyId = existingCompany.id;
+      } else {
+        // Create new company
+        const newCompany = await jobService.createCompany({ name: formData.company });
+        finalCompanyId = newCompany.id;
+      }
+
+      // 2. Resolve Status ID
+      let finalStatusId = null;
+      if (jobStatuses.length > 0) {
+        const selectedStatusObj = jobStatuses.find(s => s.label === formData.status);
+        finalStatusId = selectedStatusObj ? selectedStatusObj.id : jobStatuses[0].id;
+      } else {
+        throw new Error("Job statuses not loaded properly");
+      }
+
       await jobService.createJob({
-        ...formData,
-        companyName: formData.company // adjust payload based on API
+        title: formData.title,
+        companyId: finalCompanyId,
+        jobIdOrLink: formData.jobIdOrLink || '',
+        comments: formData.comments,
+        noticePeriodRequirement: formData.noticePeriodRequirement,
+        statusId: finalStatusId
       });
+      
       setIsModalOpen(false);
       setFormData({
-        title: '', company: '', jobIdOrLink: '', comments: '', noticePeriodRequirement: '', status: 'Hiring'
+        title: '', company: '', jobIdOrLink: '', comments: '', noticePeriodRequirement: '', status: jobStatuses.length > 0 ? jobStatuses[0].label : 'Hiring'
       });
       fetchData(); // Refresh list
     } catch (error) {
       console.error("Failed to post job", error);
-      alert(error.response?.data?.message || "Failed to post job.");
+      alert(error.response?.data?.message || error.message || "Failed to post job.");
     } finally {
       setIsSubmitting(false);
     }
@@ -198,7 +231,7 @@ export default function Jobs() {
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-orange-500 focus:outline-none"
               >
                 <option value="">All Statuses</option>
-                {mockStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                {(jobStatuses.length > 0 ? jobStatuses.map(s => s.label) : mockStatuses).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
 
@@ -259,11 +292,11 @@ export default function Jobs() {
                     </div>
                     <div className="flex flex-col items-end gap-2">
                       <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        job.status === 'Urgently Hiring' ? 'bg-red-100 text-red-700' :
-                        job.status === 'Hiring' ? 'bg-green-100 text-green-700' :
+                        job.status?.label === 'Urgently Hiring' ? 'bg-red-100 text-red-700' :
+                        job.status?.label === 'Hiring' ? 'bg-green-100 text-green-700' :
                         'bg-gray-100 text-gray-700'
                       }`}>
-                        {job.status}
+                        {job.status?.label || job.status}
                       </span>
                       <button onClick={() => handleReport(job.id)} className="text-xs text-gray-400 hover:text-red-500 flex items-center gap-1 mt-1 transition-colors">
                         <Flag className="h-3 w-3" /> Report
@@ -352,7 +385,7 @@ export default function Jobs() {
               onChange={handleFormChange}
               className="flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
             >
-              {mockStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+              {(jobStatuses.length > 0 ? jobStatuses.map(s => s.label) : mockStatuses).map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
 
