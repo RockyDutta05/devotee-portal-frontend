@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { AlertCircle } from 'lucide-react';
 import WatermarkBackground from '../components/WatermarkBackground';
 
-export default function Login() {
+export default function Login({ isAdminLogin = false }) {
   const navigate = useNavigate();
   const { login } = useAuth();
 
@@ -22,7 +22,7 @@ export default function Login() {
 
     try {
       await login(email, password);
-      navigate('/dashboard');
+      navigate(isAdminLogin ? '/admin' : '/dashboard');
     } catch (err) {
       const data = err.response?.data;
       if (data && (data.errorCode === '403_PENDING_APPROVAL' || data.error === '403_PENDING_APPROVAL')) {
@@ -49,8 +49,12 @@ export default function Login() {
             <div className="inline-flex items-center justify-center h-16 w-16 bg-orange-100 rounded-full mb-4 border border-orange-200">
               <span className="text-3xl">🕉️</span>
             </div>
-            <h1 className="text-3xl font-extrabold text-gray-950 tracking-tight">Welcome Back</h1>
-            <p className="text-gray-700 font-medium mt-2">Sign in to your devotee account</p>
+            <h1 className="text-3xl font-extrabold text-gray-950 tracking-tight">
+              {isAdminLogin ? 'Admin Login' : 'Welcome Back'}
+            </h1>
+            <p className="text-gray-700 font-medium mt-2">
+              {isAdminLogin ? 'Sign in to the administrative console' : 'Sign in to your devotee account'}
+            </p>
           </div>
 
           {error && (
@@ -101,10 +105,12 @@ export default function Login() {
             </Button>
           </form>
 
-          <p className="text-center mt-6 text-sm font-semibold text-gray-800">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-orange-600 font-bold hover:underline">Sign up here</Link>
-          </p>
+          {!isAdminLogin && (
+            <p className="text-center mt-6 text-sm font-semibold text-gray-800">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-orange-600 font-bold hover:underline">Sign up here</Link>
+            </p>
+          )}
         </div>
       </div>
     </>

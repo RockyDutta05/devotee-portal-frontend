@@ -9,6 +9,11 @@ const adminService = {
     return response.data;
   },
 
+  getDashboardStats: async () => {
+    const response = await api.get('/admin/signups/stats');
+    return response.data;
+  },
+
   approveSignup: async (id) => {
     const response = await api.put(`/admin/signups/${id}/approve`);
     return response.data;

@@ -14,6 +14,7 @@ export default function Admin() {
   const [reports, setReports] = useState([]);
   const [referralCap, setReferralCap] = useState(3);
   const [isLoading, setIsLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({ totalUsers: 0, activeJobs: 0 });
   
   const [companySearch, setCompanySearch] = useState('');
 
@@ -41,6 +42,7 @@ export default function Admin() {
     fetchReports();
     fetchSettings();
     fetchCompanies();
+    fetchStats();
   }, []);
 
   useEffect(() => {
@@ -88,6 +90,15 @@ export default function Admin() {
     try {
       const data = await jobService.getCompanies();
       setCompanies(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchStats = async () => {
+    try {
+      const data = await adminService.getDashboardStats();
+      setDashboardStats(data || { totalUsers: 0, activeJobs: 0 });
     } catch (e) {
       console.error(e);
     }
@@ -242,7 +253,7 @@ export default function Admin() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Total Users</p>
-                      <h4 className="text-2xl font-bold text-gray-900 mt-1">1,248</h4>
+                      <h4 className="text-2xl font-bold text-gray-900 mt-1">{dashboardStats.totalUsers}</h4>
                     </div>
                     <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                       <Users className="h-6 w-6" />
@@ -255,7 +266,7 @@ export default function Admin() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-gray-500">Active Jobs</p>
-                      <h4 className="text-2xl font-bold text-gray-900 mt-1">42</h4>
+                      <h4 className="text-2xl font-bold text-gray-900 mt-1">{dashboardStats.activeJobs}</h4>
                     </div>
                     <div className="p-3 bg-green-50 text-green-600 rounded-xl">
                       <Activity className="h-6 w-6" />

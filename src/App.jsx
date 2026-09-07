@@ -24,6 +24,7 @@ function App() {
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/admin/login" element={<Login isAdminLogin={true} />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
 
@@ -35,11 +36,11 @@ function App() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/referrals" element={<Referrals />} />
               <Route path="/requests" element={<Requests />} />
-              
-              {/* Admin Routes */}
-              <Route element={<ProtectedRoute requireAdmin={true} />}>
-                <Route path="/admin" element={<Admin />} />
-              </Route>
+            </Route>
+
+            {/* Admin Routes */}
+            <Route element={<ProtectedRoute requireAdmin={true} />}>
+              <Route path="/admin" element={<Admin />} />
             </Route>
           </Route>
         </Routes>
