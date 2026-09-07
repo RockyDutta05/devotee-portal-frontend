@@ -59,7 +59,8 @@ export default function Dashboard() {
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently';
-    const date = new Date(dateString);
+    const utcDateString = dateString.endsWith('Z') ? dateString : `${dateString}Z`;
+    const date = new Date(utcDateString);
     const now = new Date();
     const diff = now - date;
     const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -154,7 +155,7 @@ export default function Dashboard() {
                     <div className="flex items-center gap-3 mb-1">
                       <h4 className="font-semibold text-gray-900 text-lg">{job.title}</h4>
                       <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                        {job.status || 'Hiring'}
+                        {job.status?.label || job.status || 'Hiring'}
                       </span>
                     </div>
                     <div className="flex items-center gap-4 text-sm text-gray-500">
