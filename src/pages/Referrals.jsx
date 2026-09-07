@@ -58,10 +58,27 @@ export default function Referrals() {
     e.preventDefault();
     if (newCompany.trim() && !myCompanies.includes(newCompany.trim())) {
       try {
-        await referralService.addCompany(newCompany.trim());
-        setMyCompanies([...myCompanies, newCompany.trim()]);
+        const companyName = newCompany.trim();
+        // 1. Fetch all companies to see if it exists
+        const { default: jobService } = await import('../services/jobService');
+        const companiesData = await jobService.getCompanies();
+        const existingCompany = companiesData.find(c => c.name.toLowerCase() === companyName.toLowerCase());
+        
+        let finalCompanyId = null;
+        if (existingCompany) {
+          finalCompanyId = existingCompany.id;
+        } else {
+          // Create new company
+          const newCreatedCompany = await jobService.createCompany({ name: companyName });
+          finalCompanyId = newCreatedCompany.id;
+        }
+
+        // 2. Add it to referral list
+        await referralService.addCompany({ companyId: finalCompanyId });
+        setMyCompanies([...myCompanies, companyName]);
         setNewCompany('');
       } catch (error) {
+        console.error(error);
         alert("Failed to add company");
       }
     }

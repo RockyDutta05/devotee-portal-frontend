@@ -17,8 +17,8 @@ const referralService = {
     return response.data;
   },
 
-  addCompany: async (company) => {
-    const response = await api.post('/referral/companies', { company });
+  addCompany: async (payload) => {
+    const response = await api.post('/referral/companies', payload);
     return response.data;
   },
 
