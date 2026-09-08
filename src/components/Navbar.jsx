@@ -4,6 +4,7 @@ import { Briefcase, User, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService';
 import { useAuth } from '../context/AuthContext';
+import NotificationBell from './NotificationBell';
 
 export default function Navbar() {
   const navigate = useNavigate();
@@ -34,10 +35,13 @@ export default function Navbar() {
         </div>
         <div className="flex items-center gap-4">
           {isAuthenticated ? (
-            <button onClick={handleLogout} className="flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
+            <>
+              <NotificationBell />
+              <button onClick={handleLogout} className="flex items-center gap-2 rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                <LogOut className="h-4 w-4" />
+                Logout
+              </button>
+            </>
           ) : (
             <>
               <Link to="/login" className="text-sm font-medium text-gray-600 hover:text-orange-600">Login</Link>
