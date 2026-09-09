@@ -7,6 +7,12 @@ const resumeService = {
     return response.data;
   },
 
+  // Public browse with pagination
+  getPublicResumes: async (page = 0, size = 12) => {
+    const response = await api.get(`/resumes/browse?page=${page}&size=${size}`);
+    return response.data;
+  },
+  // Existing method kept for backward compatibility
   browseResumes: async () => {
     const response = await api.get('/resumes/browse');
     return response.data;

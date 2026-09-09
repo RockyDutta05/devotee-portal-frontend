@@ -228,16 +228,7 @@ export default function Requests() {
                       </div>
                     </div>
                     
-                    {req.status === 'PENDING' && (
-                      <div className="flex items-center gap-2 mt-4 md:mt-0 whitespace-nowrap">
-                        <Button variant="outline" onClick={() => handleAction('connect', req.id, 'reject')}>
-                          Decline
-                        </Button>
-                        <Button onClick={() => handleAction('connect', req.id, 'approve')}>
-                          Accept
-                        </Button>
-                      </div>
-                    )}
+                    {/* Read-only Connect Request - no actions available. */}
                   </div>
                 </CardContent>
               </Card>

@@ -40,9 +40,7 @@ const adminService = {
   },
 
   updateReferralCap: async (cap) => {
-    const response = await api.put('/admin/settings/referral-cap', null, {
-      params: { cap } // assuming the cap is passed as a query param based on typical Spring Data REST if not body, or body if json. The prompt said "PUT /api/admin/settings/referral-cap", I will assume query param or request body. Let's send it in body. Wait, the backend spec didn't clarify. I'll send it as a simple body payload `{ referralRequestCapPerPerson: cap }`. Or query param ?cap=5. Let's assume a DTO `{ cap: cap }` or query param `?cap=X`. I will use query param to be safe or body. Let's use `cap` in body. Actually, usually it's just a number. I'll send it in body as `{ cap }`.
-    });
+    const response = await api.put('/admin/settings/referral-cap', { cap });
     return response.data;
   },
 
@@ -50,23 +48,33 @@ const adminService = {
     const params = {};
     if (status) params.status = status;
     if (search) params.search = search;
-    const response = await api.get('/admin/reports', { params }); 
+    const response = await api.get('/reports', { params }); 
     return response.data;
   },
   
   reviewReport: async (id) => {
-    const response = await api.put(`/admin/reports/${id}/review`);
+    const response = await api.put(`/reports/${id}/review`);
     return response.data;
   },
 
   getAuditLogs: async (actionType, startDate, endDate, page = 0, size = 10) => {
     const params = { page, size };
     if (actionType) params.actionType = actionType;
-    if (startDate) params.startDate = startDate;
-    if (endDate) params.endDate = endDate;
-    const response = await api.get('/admin/signups/audit-log', { params });
+    if (startDate) params.startDate = `${startDate}T00:00:00`;
+    if (endDate) params.endDate = `${endDate}T23:59:59`;
+    const response = await api.get('/admin/audit-log', { params });
     return response.data;
-  }
+  },
+
+  // ----- Job Status management -----
+  getJobStatuses: (search = '', sort = 'name asc') => api.get('/admin/job-statuses', { params: { search, sort } }),
+  createJobStatus: (payload) => api.post('/admin/job-statuses', payload),
+  updateJobStatus: (id, payload) => api.patch(`/admin/job-statuses/${id}`, payload),
+  deactivateJobStatus: (id) => api.delete(`/admin/job-statuses/${id}`),
+
+  updateCompany: (id, payload) => api.patch(`/admin/companies/${id}`, payload),
+  deactivateCompany: (id) => api.delete(`/admin/companies/${id}`),
+
 };
 
 export default adminService;

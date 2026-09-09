@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8081/api';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -45,7 +45,7 @@ async function runTests() {
   // Admin login (seeded by DataSeeder)
   let adminLogin;
   try {
-      adminLogin = await apiClient.post('/auth/login', { email: 'admin@example.com', password: 'admin123' });
+      adminLogin = await apiClient.post('/auth/login', { email: 'admin@gmail.com', password: 'admin123' });
   } catch(e) {
       assert(false, "Admin login exception", e.message + (e.response ? " data: " + JSON.stringify(e.response.data) + " status: " + e.response.status : ""));
   }

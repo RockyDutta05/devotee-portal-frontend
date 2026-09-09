@@ -14,6 +14,24 @@ const profileService = {
   getProfileById: async (userId) => {
     const response = await api.get(`/profile/${userId}`);
     return response.data;
+  },
+
+  // New: request contact info
+  requestContactInfo: async (targetUserId, reason) => {
+    const response = await api.post('/contact-requests', {
+      targetUserId,
+      reason,
+    });
+    return response.data;
+  },
+
+  // New: send connect request
+  connectRequest: async (targetUserId, message) => {
+    const response = await api.post('/connect-requests', {
+      targetUserId,
+      message,
+    });
+    return response.data;
   }
 };
 

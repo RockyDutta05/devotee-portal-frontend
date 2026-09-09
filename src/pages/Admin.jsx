@@ -5,6 +5,8 @@ import Input from '../components/Input';
 import { Users, Building, AlertTriangle, Settings, Activity, Check, X, Search, Edit2, ShieldCheck, List } from 'lucide-react';
 import adminService from '../services/adminService';
 import jobService from '../services/jobService';
+import CompanyEditModal from '../components/CompanyEditModal';
+import JobStatusModal from '../components/JobStatusModal';
 
 export default function Admin() {
   const [activeTab, setActiveTab] = useState('overview');
@@ -17,6 +19,13 @@ export default function Admin() {
   const [dashboardStats, setDashboardStats] = useState({ totalUsers: 0, activeJobs: 0 });
   
   const [companySearch, setCompanySearch] = useState('');
+  // New state for modals and selections
+  const [companyEditOpen, setCompanyEditOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [jobStatusOpen, setJobStatusOpen] = useState(false);
+  const [selectedJobStatus, setSelectedJobStatus] = useState(null);
+  const [jobStatuses, setJobStatuses] = useState([]);
+  const [jobStatusSearch, setJobStatusSearch] = useState('');
 
   // Pending Signups State
   const [signupSearch, setSignupSearch] = useState('');
@@ -43,6 +52,7 @@ export default function Admin() {
     fetchSettings();
     fetchCompanies();
     fetchStats();
+    fetchJobStatuses();
   }, []);
 
   useEffect(() => {
@@ -63,6 +73,15 @@ export default function Admin() {
     try {
       const data = await adminService.getPendingSignups(signupSearch, signupSort);
       setSignups(data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchJobStatuses = async () => {
+    try {
+      const data = await adminService.getJobStatuses(jobStatusSearch);
+      setJobStatuses(data || []);
     } catch (e) {
       console.error(e);
     }
@@ -186,7 +205,7 @@ export default function Admin() {
     try {
       await jobService.createCompany({ name: name.trim() });
       alert("Company added successfully!");
-      fetchData();
+      fetchCompanies();
     } catch (error) {
       alert(error.response?.data?.message || "Failed to add company.");
     }
@@ -196,6 +215,7 @@ export default function Admin() {
     { id: 'overview', label: 'Overview', icon: Activity },
     { id: 'signups', label: 'Pending Signups', icon: Users },
     { id: 'companies', label: 'Master Companies', icon: Building },
+    { id: 'job-statuses', label: 'Job Statuses', icon: List },
     { id: 'reports', label: 'Job Reports', icon: AlertTriangle },
     { id: 'settings', label: 'Referral Settings', icon: Settings },
     { id: 'activity', label: 'Activity Log', icon: List }
@@ -443,10 +463,23 @@ export default function Admin() {
                       )}
                     </div>
                     <div className="flex items-center gap-2">
-                      {company.status === 'PENDING' && (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-xs py-1 h-auto" onClick={() => handleAction(setCompanies, company.id, 'APPROVED')}>Approve</Button>
+                      <button className="p-2 text-gray-400 hover:text-orange-600 rounded-full hover:bg-orange-50" onClick={() => { setSelectedCompany(company); setCompanyEditOpen(true); }}>
+                        <Edit2 className="h-4 w-4" />
+                      </button>
+                      {company.status !== 'DEACTIVATED' && (
+                        <button className="p-2 text-red-500 hover:text-red-600 rounded-full hover:bg-red-50" onClick={async () => {
+                          if (window.confirm('Deactivate this company?')) {
+                            try {
+                              await adminService.deactivateCompany(company.id);
+                              fetchCompanies();
+                            } catch (e) {
+                              alert(e.response?.data?.message || 'Failed to deactivate');
+                            }
+                          }
+                        }}>
+                          <X className="h-4 w-4" />
+                        </button>
                       )}
-                      <button className="p-2 text-gray-400 hover:text-orange-600 rounded-full hover:bg-orange-50"><Edit2 className="h-4 w-4" /></button>
                     </div>
                   </li>
                 ))}
@@ -457,6 +490,60 @@ export default function Admin() {
             </Card>
           </div>
         )}
+
+      {/* Job Statuses Tab */}
+      {activeTab === 'job-statuses' && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h1 className="text-2xl font-bold text-gray-900">Job Statuses</h1>
+            <Button size="sm" onClick={() => { setSelectedJobStatus(null); setJobStatusOpen(true); }}>Add Status</Button>
+          </div>
+          <Input placeholder="Search statuses..." value={jobStatusSearch} onChange={e => { setJobStatusSearch(e.target.value); fetchJobStatuses(); }} className="w-full" />
+          <Card>
+            <ul className="divide-y divide-gray-100">
+              {jobStatuses.map(status => (
+                <li key={status.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors">
+                  <span className="font-medium text-gray-900">{status.name}</span>
+                  <div className="flex items-center gap-2">
+                    <Button size="sm" variant="outline" onClick={() => { setSelectedJobStatus(status); setJobStatusOpen(true); }}>Edit</Button>
+                    {status.isActive && (
+                      <button className="p-2 text-red-500 hover:text-red-600 rounded-full hover:bg-red-50" onClick={async () => {
+                        if (window.confirm('Deactivate this status?')) {
+                          try {
+                            await adminService.deactivateJobStatus(status.id);
+                            fetchJobStatuses();
+                          } catch (e) {
+                            alert(e.response?.data?.message || 'Failed to deactivate');
+                          }
+                        }
+                      }}>
+                        <X className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </li>
+              ))}
+              {jobStatuses.length === 0 && (
+                <li className="p-8 text-center text-gray-500">No job statuses found.</li>
+              )}
+            </ul>
+          </Card>
+        </div>
+      )}
+
+      {/* Modals */}
+      <CompanyEditModal
+        isOpen={companyEditOpen}
+        onClose={() => setCompanyEditOpen(false)}
+        company={selectedCompany}
+        onSaved={fetchCompanies}
+      />
+      <JobStatusModal
+        isOpen={jobStatusOpen}
+        onClose={() => setJobStatusOpen(false)}
+        status={selectedJobStatus}
+        onSaved={fetchJobStatuses}
+      />
 
         {/* REPORTS */}
         {activeTab === 'reports' && (
@@ -617,7 +704,7 @@ export default function Admin() {
                     {auditLogs.map(log => (
                       <tr key={log.id} className="hover:bg-gray-50/50 transition-colors">
                         <td className="p-4 whitespace-nowrap text-gray-500">{new Date(log.createdAt).toLocaleString()}</td>
-                        <td className="p-4 font-medium text-gray-900">{log.adminUser}</td>
+                        <td className="p-4 font-medium text-gray-900">{log.adminUserEmail}</td>
                         <td className="p-4">
                           <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-md text-xs font-semibold">
                             {log.actionType}
