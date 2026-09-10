@@ -11,6 +11,9 @@ import {
 import jobService from '../services/jobService';
 import profileService from '../services/profileService';
 import dashboardService from '../services/dashboardService';
+import adminService from '../services/adminService';
+import requestService from '../services/requestService';
+import referralService from '../services/referralService';
 
 const StatBox = ({ title, value, icon: Icon, colorClass }) => (
   <Card>
@@ -30,6 +33,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const [recentJobs, setRecentJobs] = useState([]);
   const [profileCompletion, setProfileCompletion] = useState(0);
+  const [pendingActions, setPendingActions] = useState([]);
   
   const [stats, setStats] = useState({
     availableJobs: 0,
@@ -59,7 +63,68 @@ export default function Dashboard() {
     dashboardService.getStats().then(data => {
       if (data) setStats(data);
     }).catch(err => console.error("Failed to load dashboard stats", err));
-  }, []);
+    
+    // Fetch pending actions based on role
+    if (user?.role === 'ROLE_ADMIN') {
+      Promise.all([
+        adminService.getPendingSignups(),
+        adminService.getReports('PENDING')
+      ]).then(([signups, reports]) => {
+        const actions = [];
+        (signups || []).filter(s => s.approvalStatus === 'PENDING').forEach(s => {
+          actions.push({
+            id: `signup-${s.id}`,
+            type: 'Signup Request',
+            title: 'Pending Signup Approval',
+            description: `Review signup for ${s.name} (${s.email})`,
+            link: '/admin',
+            date: new Date(s.createdAt || Date.now())
+          });
+        });
+        (reports || []).filter(r => r.status === 'PENDING').forEach(r => {
+          actions.push({
+            id: `report-${r.id}`,
+            type: 'Job Report',
+            title: 'Pending Job Report',
+            description: `Review report for job: ${r.job}`,
+            link: '/admin',
+            date: new Date(r.createdAt || Date.now())
+          });
+        });
+        actions.sort((a, b) => b.date - a.date);
+        setPendingActions(actions);
+      }).catch(err => console.error(err));
+    } else {
+      Promise.all([
+        requestService.getIncomingRequests(),
+        referralService.getIncomingRequests()
+      ]).then(([contacts, referrals]) => {
+        const actions = [];
+        (contacts || []).filter(c => c.status === 'PENDING').forEach(c => {
+          actions.push({
+            id: `contact-${c.id}`,
+            type: 'Contact Info Request',
+            title: 'Contact Info Request',
+            description: c.reason || "I would love to connect.",
+            link: '/requests',
+            date: new Date(c.createdAt || Date.now())
+          });
+        });
+        (referrals || []).filter(r => r.status === 'PENDING').forEach(r => {
+          actions.push({
+            id: `referral-${r.id}`,
+            type: 'Referral Request',
+            title: 'Referral Request',
+            description: `Target Company: ${r.company?.name || 'Unknown'}. ${r.message || ''}`,
+            link: '/requests',
+            date: new Date(r.createdAt || Date.now())
+          });
+        });
+        actions.sort((a, b) => b.date - a.date);
+        setPendingActions(actions);
+      }).catch(err => console.error(err));
+    }
+  }, [user]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'Recently';
@@ -187,42 +252,32 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="space-y-4">
               
-              {/* Request Item */}
-              <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h5 className="font-semibold text-gray-900 text-sm">Contact Info Request</h5>
-                  <span className="h-2 w-2 rounded-full bg-orange-500 mt-1.5"></span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  "Hi, I would love to connect to discuss the software engineering role at your company."
-                </p>
-                <div className="flex gap-2">
-                  <Link to="/requests" className="w-full">
-                    <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
-                  </Link>
-                </div>
-              </div>
+              {pendingActions.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No pending actions right now.</p>
+              ) : (
+                pendingActions.slice(0, 3).map(action => (
+                  <div key={action.id} className="bg-orange-50 p-4 rounded-xl border border-orange-100">
+                    <div className="flex items-start justify-between mb-2">
+                      <h5 className="font-semibold text-gray-900 text-sm">{action.title}</h5>
+                      <span className="h-2 w-2 rounded-full bg-orange-500 mt-1.5"></span>
+                    </div>
+                    <p className="text-sm text-gray-600 mb-3 line-clamp-2">
+                      {action.description}
+                    </p>
+                    <div className="flex gap-2">
+                      <Link to={action.link} className="w-full">
+                        <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))
+              )}
 
-              {/* Request Item */}
-              <div className="bg-orange-50 p-4 rounded-xl border border-orange-100">
-                <div className="flex items-start justify-between mb-2">
-                  <h5 className="font-semibold text-gray-900 text-sm">Referral Request</h5>
-                  <span className="h-2 w-2 rounded-full bg-orange-500 mt-1.5"></span>
-                </div>
-                <p className="text-sm text-gray-600 mb-3 line-clamp-2">
-                  Target Company: <strong>InnovateX</strong><br/>
-                  "I have applied for the Product Manager role. Please refer me."
-                </p>
-                <div className="flex gap-2">
-                  <Link to="/requests" className="w-full">
-                    <Button size="sm" className="w-full text-xs py-1.5">Review</Button>
-                  </Link>
-                </div>
-              </div>
-
-              <Link to="/requests" className="block text-center text-sm font-medium text-orange-600 hover:underline pt-2">
-                See all {stats.pendingContacts + stats.pendingReferrals} requests
-              </Link>
+              {pendingActions.length > 0 && (
+                <Link to={user?.role === 'ROLE_ADMIN' ? '/admin' : '/requests'} className="block text-center text-sm font-medium text-orange-600 hover:underline pt-2">
+                  See all {pendingActions.length} pending actions
+                </Link>
+              )}
             </CardContent>
           </Card>
         </div>
