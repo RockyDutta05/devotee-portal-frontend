@@ -26,13 +26,16 @@ export default function NotificationBell() {
   const fetchNotifications = async () => {
     try {
       const data = await notificationService.getMyNotifications();
-      setNotifications(data);
+      // Ensure we store an array; API might return an object with a 'notifications' field
+      const notifArray = Array.isArray(data) ? data : (data && Array.isArray(data.notifications) ? data.notifications : []);
+      setNotifications(notifArray);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
+      setNotifications([]);
     }
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const unreadCount = Array.isArray(notifications) ? notifications.filter(n => !n.read).length : 0;
 
   const handleMarkAsRead = async (id, e) => {
     e.stopPropagation();

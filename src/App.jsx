@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
+import AdminLoginGuard from './components/AdminLoginGuard';
 import MainLayout from './layouts/MainLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
@@ -23,10 +24,15 @@ function App() {
         <Routes>
           <Route element={<MainLayout />}>
             <Route path="/" element={<Home />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/admin/login" element={<Login isAdminLogin={true} />} />
+            {/* Devotee login */}
+            <Route path="/login" element={<Login isAdminLogin={false} />} />
+
             <Route path="/signup" element={<Signup />} />
             <Route path="/pending-approval" element={<PendingApproval />} />
+
+            {/* Admin login – separate dedicated URL */}
+            <Route path="/admin" element={<AdminLoginGuard />} />
+            <Route path="/admin/login" element={<Login isAdminLogin={true} />} />
 
             {/* Protected Routes */}
             <Route element={<ProtectedRoute />}>
@@ -36,12 +42,9 @@ function App() {
               <Route path="/jobs" element={<Jobs />} />
               <Route path="/referrals" element={<Referrals />} />
               <Route path="/requests" element={<Requests />} />
+              <Route path="/admin/dashboard" element={<Admin />} />
             </Route>
 
-            {/* Admin Routes */}
-            <Route element={<ProtectedRoute requireAdmin={true} />}>
-              <Route path="/admin" element={<Admin />} />
-            </Route>
           </Route>
         </Routes>
       </BrowserRouter>

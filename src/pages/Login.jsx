@@ -22,7 +22,7 @@ export default function Login({ isAdminLogin = false }) {
 
     try {
       await login(email, password);
-      navigate(isAdminLogin ? '/admin' : '/dashboard');
+      navigate(isAdminLogin ? '/admin/dashboard' : '/dashboard');
     } catch (err) {
       const data = err.response?.data;
       if (data && (data.errorCode === '403_PENDING_APPROVAL' || data.error === '403_PENDING_APPROVAL')) {

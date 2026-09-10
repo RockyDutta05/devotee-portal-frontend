@@ -5,7 +5,19 @@ const authService = {
   login: async (credentials) => {
     try {
       const response = await api.post('/auth/login', credentials);
-      return response.data;
+      // Normalize token field from various possible backend keys
+      const data = response.data;
+      const token =
+        data?.accessToken ||
+        data?.token ||
+        data?.jwt ||
+        data?.access_token ||
+        data?.accessToken ||
+        null;
+      if (token) {
+        data.accessToken = token;
+      }
+      return data;
     } catch (error) {
       console.error("Login error", error);
       throw error;

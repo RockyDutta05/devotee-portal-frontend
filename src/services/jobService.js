@@ -3,18 +3,22 @@ import api from './api';
 const jobService = {
   getJobs: async () => {
     const response = await api.get('/jobs');
-    return response.data;
+    // Backend returns a Spring Data Page object; the actual list is in `content`
+    return (response.data && response.data.content) ? response.data.content : [];
   },
+
 
   getJobById: async (id) => {
     const response = await api.get(`/jobs/${id}`);
     return response.data;
   },
 
+
   getStatuses: async () => {
     const response = await api.get('/jobs/statuses');
     return response.data;
   },
+
 
   createJob: async (jobData) => {
     const response = await api.post('/jobs', jobData);

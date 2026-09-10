@@ -1,13 +1,12 @@
 import axios from 'axios';
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-// In production, assume the backend API is served from the same origin under the /api path.
-// This avoids incorrect port usage (e.g., trying to reach :8080 on the hosted domain) which caused request aborts.
 const defaultBaseUrl = isLocalhost
   ? 'http://localhost:8080/api'
-  : '/api';
+  : (import.meta.env.VITE_BACKEND_URL || 'https://devotee-portal-backend-lqvo.onrender.com/api');
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || defaultBaseUrl;
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || defaultBaseUrl;
+
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -15,45 +14,42 @@ const api = axios.create({
   },
 });
 
-// Request interceptor to add the JWT token to headers
+// Request interceptor – attach JWT from localStorage
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');
-    if (token) {
+    // Guard: only attach if token is truthy and NOT the literal string "undefined"/"null"
+    if (token && token !== 'undefined' && token !== 'null') {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor to handle global errors
+// Response interceptor – handle errors globally
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
     if (error.response) {
       const { status, data } = error.response;
-      
-      if (status === 401) {
-        // Unauthorized
+      const requestUrl = error.config?.url || '';
+
+      // Never auto-redirect on auth endpoints themselves
+      const isAuthEndpoint = requestUrl.includes('/auth/');
+
+      if (status === 401 && !isAuthEndpoint) {
+        // Fire a custom event instead of window.location – prevents aborting all in-flight requests
         localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
-        window.location.href = '/login';
-      } else if (status === 403) {
-        // Forbidden - Check specific error codes
+        window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+      } else if (status === 403 && !isAuthEndpoint) {
         if (data && (data.errorCode === '403_PENDING_APPROVAL' || data.error === '403_PENDING_APPROVAL')) {
-           window.location.href = '/pending-approval';
+          window.location.href = '/pending-approval';
         } else if (data && (data.errorCode === '403_REJECTED' || data.error === '403_REJECTED')) {
-           // We can let the component handle it or redirect to a generic rejected page
-           // Let's not force redirect for rejected unless we have a page for it. The login page handles it if logging in.
-           // If they are already in the app and get rejected (e.g. admin revoked), log them out and redirect to login
-           localStorage.removeItem('accessToken');
-           localStorage.removeItem('user');
-           window.location.href = '/login?error=rejected';
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login?error=rejected';
         }
       }
     }
