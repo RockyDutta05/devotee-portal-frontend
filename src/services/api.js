@@ -1,9 +1,11 @@
 import axios from 'axios';
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-const defaultBaseUrl = isLocalhost 
-  ? 'http://localhost:8080/api' 
-  : `${window.location.protocol}//${window.location.hostname}:8080/api`;
+// In production, assume the backend API is served from the same origin under the /api path.
+// This avoids incorrect port usage (e.g., trying to reach :8080 on the hosted domain) which caused request aborts.
+const defaultBaseUrl = isLocalhost
+  ? 'http://localhost:8080/api'
+  : '/api';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || defaultBaseUrl;
 const api = axios.create({
