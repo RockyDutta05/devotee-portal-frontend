@@ -50,7 +50,7 @@ const authService = {
   },
 
   logout: () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('accessToken');
     localStorage.removeItem('user');
   },
 
@@ -65,7 +65,7 @@ const authService = {
   },
   
   isAuthenticated: () => {
-    return !!localStorage.getItem('token');
+    return !!localStorage.getItem('accessToken');
   }
 };
 
