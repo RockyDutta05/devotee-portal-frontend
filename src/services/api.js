@@ -40,7 +40,7 @@ api.interceptors.response.use(
       
       if (status === 401) {
         // Unauthorized
-        localStorage.removeItem('token');
+        localStorage.removeItem('accessToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
       } else if (status === 403) {
@@ -51,7 +51,7 @@ api.interceptors.response.use(
            // We can let the component handle it or redirect to a generic rejected page
            // Let's not force redirect for rejected unless we have a page for it. The login page handles it if logging in.
            // If they are already in the app and get rejected (e.g. admin revoked), log them out and redirect to login
-           localStorage.removeItem('token');
+           localStorage.removeItem('accessToken');
            localStorage.removeItem('user');
            window.location.href = '/login?error=rejected';
         }
